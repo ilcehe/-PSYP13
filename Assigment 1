@@ -1,0 +1,143 @@
+#Clears working space
+rm(list=ls(all=TRUE)) 
+#Clears graphs
+graphics.off() 
+
+#Load packages 
+require(lsr)
+require(psych)
+require(sciplot)
+require(editrules)
+require(car)
+
+#Set working directory
+setwd("~/Desktop/R Program")
+
+#Loads data
+data_sample_1 = read.csv("https://raw.githubusercontent.com/kekecsz/PSYP13_Data_analysis_class-2018/master/home_sample_1.csv")
+
+#A model using only demographic information was created
+model.1 <- lm( formula = pain ~ sex + age, data = data_sample_1 ) 
+print(model.1)
+summary(model.1)
+
+#A new model using the indicatiors age, sex, STAI, pain catastrophizing, mindfulness, and cortisol measures was created
+model.2 <- lm( formula = pain ~ sex + age + STAI_trait + pain_cat + mindfulness 
+               + cortisol_saliva + cortisol_serum, data = data_sample_1 )
+print(model.2)
+
+#Check models for outliers
+cooks.distance( model = model.2 )
+
+#Plots the outliers
+plot(x = model.2, which = 4)
+
+#Runs the lm without each outlier to observe which of the outliers produces the bigger impact on the data
+lm( formula = pain ~ sex + age + STAI_trait + pain_cat + mindfulness 
+    + cortisol_saliva + cortisol_serum, data = data_sample_1, subset = -28)
+
+lm( formula = pain ~ sex + age + STAI_trait + pain_cat + mindfulness 
+    + cortisol_saliva + cortisol_serum, data = data_sample_1, subset = -51)
+
+lm( formula = pain ~ sex + age + STAI_trait + pain_cat + mindfulness 
+    + cortisol_saliva + cortisol_serum, data = data_sample_1, subset = -71)
+
+print(model.2)
+
+#Removes row 28
+data_sample_1 <- data_sample_1[-c(28), ]
+
+#Re ran model 2 without observation 28
+model.2 <- lm( formula = pain ~ sex + age + STAI_trait + pain_cat + mindfulness 
+               + cortisol_saliva + cortisol_serum, data = data_sample_1 )
+
+#Re prints model 2
+print(model.2)
+
+#Check for coding erros based on the minimum and maximum values per variable
+describe(data_sample_1) 
+
+#Errors in the mindfunless variable were identified, this code identifies which row has the error code
+library(editrules) 
+(E <- editset(c("mindfulness >=1", "mindfulness <= 6")))
+violatedEdits(E, data_sample_1)
+
+#Removes participants 112 and 146
+data_sample_1 <- data_sample_1[-c(111, 145), ]
+
+#Re run model 1 with excluded data 
+model.1 <- lm( formula = pain ~ sex + age, data = data_sample_1 ) 
+print(model.1)
+summary(model.1)
+
+#Re run model 2 with excluded data
+model.2 <- lm( formula = pain ~ sex + age + STAI_trait + pain_cat + mindfulness 
+               + cortisol_saliva + cortisol_serum, data = data_sample_1 )
+summary(model.2)
+#Checks the normality of the residuals
+source("GraphPlots.R")
+openGraph()
+hist( x = residuals(model.2), 
+      xlab = "Value of residual", 
+      main = "", 
+      breaks = 20)
+
+#Checks linearity of the relationship
+source("GraphPlots.R")
+openGraph()
+yhat.2 <- fitted.values( object = model.2 )
+plot( x = yhat.2,
+      y = data_sample_1$pain,
+      xlab = "Fitted Values",
+      ylab = "Observed Values")
+
+
+#Linearity of variance
+source("GraphPlots.R")
+openGraph()
+plot(x = model.2, which = 1) 
+
+#Homogeneity of varience
+source("GraphPlots.R")
+openGraph()
+plot(x = model.2, which = 3)
+
+#Homogeneity of varience, check P value for significant violations
+library(car) 
+ncvTest( model.2 )
+
+#Checks collinearity
+vif(model.2) 
+
+#Creates a new model excluding cortisol saliva
+model.2 <- lm( formula = pain ~ sex + age + STAI_trait + pain_cat + mindfulness 
+               + cortisol_serum, data = data_sample_1 )
+
+#Run summary to obtain R2, F, DF, and P value
+summary(model.1) 
+summary(model.2) 
+
+
+#Confidence intervals for the coefficients
+confint( object = model.1, 
+         level = .95)
+
+confint( object = model.2,
+         level = .95)
+
+#B and Beta values
+standardCoefs(model.1)
+standardCoefs(model.2) 
+
+#Akaike information criterion
+AIC(model.1, model.2)
+
+#F test statistic and p value
+anova(model.1, model.2) 
+
+
+
+
+
+
+
