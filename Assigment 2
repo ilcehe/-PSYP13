@@ -1,0 +1,122 @@
+#Clears working space
+rm(list=ls(all=TRUE)) 
+#Clears graphs
+graphics.off() 
+
+#Loads packages 
+require(lsr)
+require(psych)
+require(sciplot)
+require(editrules)
+require(car)
+
+#Sets working directory
+setwd("~/Desktop/R Program")
+
+#Loads data
+data_sample_1 = read.csv("https://raw.githubusercontent.com/kekecsz/PSYP13_Data_analysis_class-2018/master/home_sample_1.csv")
+
+#Removes participant 28
+data_sample_1 <- data_sample_1[-c(28), ]
+
+#Removes participants 112 and 146
+data_sample_1 <- data_sample_1[-c(111, 145), ]
+
+#Model from research question 1
+theorybased.model <- lm( formula = pain ~ sex + age + STAI_trait + pain_cat + mindfulness 
+               + cortisol_serum, data = data_sample_1 )
+
+#New model is created adding weight
+initial.model <- lm( formula = pain ~ sex + age + weight + STAI_trait + pain_cat + mindfulness 
+               + cortisol_serum, data = data_sample_1 )
+
+#Runs a backward regression
+step( object = initial.model,
+      direction = "backward")
+
+#New model is created 
+backwardmodel.3 <- lm(formula = pain ~ sex + age + pain_cat + mindfulness + cortisol_serum, #3
+                      data = data_sample_1) 
+
+print(backwardmodel.3)
+
+#Data diagnostics to check new variable added to the model.
+describe(data_sample_1)
+
+#Checks the normality of the residuals
+source("GraphPlots.R")
+openGraph()
+hist( x = residuals(backwardmodel.3), 
+      xlab = "Value of residual", 
+      main = "", 
+      breaks = 20)
+
+#Checks linearity of the relationship
+source("GraphPlots.R")
+openGraph()
+yhat.2 <- fitted.values( object = backwardmodel.3)
+plot( x = yhat.2,
+      y = data_sample_1$pain,
+      xlab = "Fitted Values",
+      ylab = "Observed Values")
+
+
+#Linearity of variance
+source("GraphPlots.R")
+openGraph()
+plot(x = backwardmodel.3, which = 1) 
+
+#Homogeneity of varience
+source("GraphPlots.R")
+openGraph()
+plot(x = backwardmodel.3, which = 3)
+
+#Homogeneity of varience, check P value for significant violations
+library(car) 
+ncvTest( backwardmodel.3 )
+
+#Checks collinearity
+vif(backwardmodel.3) 
+
+#Run summary to obtain R2, F, DF, and P value
+summary(initial.model) 
+summary(backwardmodel.3) 
+
+
+#Confidence intervals for the coefficients
+confint( object = initial.model, 
+         level = .95)
+
+confint( object = backwardmodel.3,
+         level = .95)
+
+#B and Beta values
+standardCoefs(initial.model)
+standardCoefs(backwardmodel.3) 
+
+#Compares backward and intial model
+AIC( backwardmodel.3, initial.model ) 
+anova( backwardmodel.3, initial.model)
+
+#Compares backward and theory model
+AIC( backwardmodel.3, theorybased.model ) 
+anova( backwardmodel.3, theorybased.model)
+
+#load new data
+data_sample_2 = read.csv("https://raw.githubusercontent.com/kekecsz/PSYP13_Data_analysis_class-2018/master/home_sample_2.csv")
+
+#Calculates predicted values
+predictback <- predict(backwardmodel.3, data_sample_2)
+predicttheory <- predict(theorybased.model, data_sample_2)
+
+#Calculates the sum of squared residuals
+residualback = sum((data_sample_2[, "pain"] - predictback)^2)
+residualtheory = sum((data_sample_2[, "pain"] - predicttheory)^2)
+residualback
+residualtheory
+
+
+
+
+
+
